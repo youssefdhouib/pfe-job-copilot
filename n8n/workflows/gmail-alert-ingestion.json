@@ -1,0 +1,44 @@
+{
+  "id": "PFEGmailAlertIngestion",
+  "name": "PFE - Gmail job alert ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {"item":[{"mode":"everyMinute"}]},
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": false,
+        "filters": {
+          "q": "label:JobAlerts",
+          "readStatus": "both"
+        },
+        "options": {"downloadAttachments":false}
+      },
+      "id": "gmail-alert-trigger",
+      "name": "Receive Gmail job alerts",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/alerts/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { source: 'gmail-alert', subject: $json.subject || $json.headers?.subject || '', html: $json.html || $json.textAsHtml || '', text: $json.text || $json.snippet || '' } }}",
+        "options": {"timeout":30000}
+      },
+      "id": "ingest-gmail-alert",
+      "name": "Normalize and save Gmail links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    }
+  ],
+  "connections": {"Receive Gmail job alerts":{"main":[[{"node":"Normalize and save Gmail links","type":"main","index":0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder":"v1"},
+  "active": false,
+  "versionId": "a8ef0ec2-d0f4-427b-93ec-f4fb40d05fa3"
+}

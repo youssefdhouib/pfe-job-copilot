@@ -1,0 +1,34 @@
+{
+  "id": "PFEATSPortfolio",
+  "name": "PFE - Startup ATS portfolio",
+  "nodes": [
+    {
+      "parameters": {"rule":{"interval":[{"field":"hours","hoursInterval":12}]}},
+      "id": "schedule-ats",
+      "name": "Every 12 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/collect/portfolio",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"query\":\"stage stagiaire internship intern pfe\",\"location\":\"France\",\"limit_per_target\":50}",
+        "options": {"timeout":180000}
+      },
+      "id": "collect-ats",
+      "name": "Collect startup boards",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {"Every 12 hours":{"main":[[{"node":"Collect startup boards","type":"main","index":0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder":"v1"},
+  "active": false,
+  "versionId": "72db1f86-321d-49bc-99d2-bbfc1f3689f4"
+}

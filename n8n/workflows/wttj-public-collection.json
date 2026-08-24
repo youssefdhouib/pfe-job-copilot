@@ -1,0 +1,34 @@
+{
+  "id": "PFEWttjPublicCollection",
+  "name": "PFE - WTTJ public collection",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 12}]}},
+      "id": "schedule-wttj",
+      "name": "Every 12 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/collect/profile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"source\":\"wttj\",\"location\":\"France\",\"max_queries\":1,\"limit_per_query\":25}",
+        "options": {"timeout": 120000}
+      },
+      "id": "collect-wttj",
+      "name": "Collect WTTJ public jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {"Every 12 hours": {"main": [[{"node": "Collect WTTJ public jobs", "type": "main", "index": 0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false,
+  "versionId": "27fbc7de-54d6-459f-a2cf-a3496f8a984b"
+}

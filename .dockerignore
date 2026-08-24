@@ -1,0 +1,10 @@
+.venv
+.env
+__pycache__
+*.pyc
+*.sqlite3
+*.db
+.tmp-*
+tests
+supabase
+n8n

@@ -1,0 +1,38 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*client-secret*.json
+*credentials*.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime data and local test artifacts
+*.sqlite3
+*.sqlite
+*.db
+.tmp-*
+screenshots/
+
+# JavaScript / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Local tooling and editor files
+.tmp-sdk/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,51 @@
+services:
+  frontend:
+    build:
+      context: ./apps/web
+      args:
+        BACKEND_INTERNAL_URL: http://backend:8000
+        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_PFE_AUTH_ENABLED: ${NEXT_PUBLIC_PFE_AUTH_ENABLED:-false}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:8000
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      NEXT_PUBLIC_PFE_AUTH_ENABLED: ${NEXT_PUBLIC_PFE_AUTH_ENABLED:-false}
+    ports:
+      - "127.0.0.1:3001:3000"
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PFE_DB_PATH: /data/jobs.sqlite3
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - backend_data:/data
+
+  n8n:
+    image: ${N8N_IMAGE:-n8nio/n8n:latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      GENERIC_TIMEZONE: Africa/Tunis
+      TZ: Africa/Tunis
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+
+volumes:
+  backend_data:
+  n8n_data:

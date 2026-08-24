@@ -1,0 +1,59 @@
+{
+  "id": "PFEFranceTravail",
+  "name": "PFE - France Travail collection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule-france-travail",
+      "name": "Every 4 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/collect/profile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"source\":\"france-travail\",\"location\":\"France\",\"max_queries\":8,\"limit_per_query\":20}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "collect-france-travail",
+      "name": "Collect France Travail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Every 4 hours": {
+      "main": [
+        [
+          {
+            "node": "Collect France Travail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "d86784fa-3b07-4ee2-ada8-c20d54a43cef"
+}

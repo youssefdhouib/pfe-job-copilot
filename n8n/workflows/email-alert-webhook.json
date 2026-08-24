@@ -1,0 +1,35 @@
+{
+  "id": "PFEEmailAlertWebhook",
+  "name": "PFE - Email alert intake webhook",
+  "nodes": [
+    {
+      "parameters": {"httpMethod":"POST","path":"pfe-job-alert","responseMode":"lastNode","options":{}},
+      "id": "alert-webhook",
+      "name": "Receive job alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "pfe-job-alert"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/alerts/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { source: $json.body?.source || 'email-alert', subject: $json.body?.subject || '', html: $json.body?.html || '', text: $json.body?.text || '' } }}",
+        "options": {"timeout":30000}
+      },
+      "id": "ingest-alert",
+      "name": "Normalize and save links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {"Receive job alert":{"main":[[{"node":"Normalize and save links","type":"main","index":0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder":"v1"},
+  "active": false,
+  "versionId": "74f02739-684c-45e5-ad10-3e44228c359c"
+}
