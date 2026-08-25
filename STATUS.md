@@ -1,6 +1,6 @@
 # PFE Job Copilot — Implementation Status
 
-Last audited: 2026-08-24
+Last audited: 2026-08-25
 
 ## Working and verified
 
@@ -18,6 +18,7 @@ Last audited: 2026-08-24
 | Indeed logged-out discovery | Two small live runs succeeded; relevance gate retained the Safran PFE role and rejected a teaching false positive | Verified; active every 12 hours |
 | Welcome to the Jungle public collector | Logged-out profile run saved 16 relevant roles and skipped 4; workflow imported into n8n | Verified; workflow inactive pending UI execution |
 | HelloWork public collector | Logged-out profile run saved 12 roles and skipped 8; stable catalogue fallback verified; workflow imported | Verified; workflow inactive pending UI execution |
+| Job lifecycle | First/last seen, active state, three-miss expiration guard, explicit deadline extraction, source health | Implemented and tested |
 
 ## Active but requiring a clean verification run
 

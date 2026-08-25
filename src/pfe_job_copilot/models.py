@@ -12,4 +12,6 @@ class Job:
     location: str = ""
     description: str = ""
     score: int = 0
-
+    source_job_id: str = ""
+    published_at: str | None = None
+    application_deadline: str | None = None

@@ -50,6 +50,8 @@ class GreenhouseCollector:
                 url=item.get("absolute_url", ""),
                 source=self.source,
                 description=description,
+                source_job_id=clean_text(item.get("id")),
+                published_at=clean_text(item.get("updated_at")) or None,
             )
             matched += 1
             if matched >= limit:
@@ -93,6 +95,8 @@ class LeverCollector:
                 url=item.get("hostedUrl") or item.get("applyUrl") or "",
                 source=self.source,
                 description=description,
+                source_job_id=clean_text(item.get("id")),
+                published_at=clean_text(item.get("createdAt")) or None,
             )
             matched += 1
             if matched >= limit:
@@ -128,6 +132,8 @@ class AshbyCollector:
                 url=item.get("jobUrl") or item.get("applyUrl") or "",
                 source=self.source,
                 description=description,
+                source_job_id=clean_text(item.get("id")),
+                published_at=clean_text(item.get("publishedAt")) or None,
             )
             matched += 1
             if matched >= limit:

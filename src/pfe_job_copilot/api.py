@@ -10,7 +10,16 @@ from pydantic import BaseModel, Field
 
 from pfe_job_copilot.collectors import get_collector
 from pfe_job_copilot.alerts import extract_alert_jobs
-from pfe_job_copilot.db import JOB_STATUSES, init_db, job_stats, query_jobs, update_job_status, upsert_job
+from pfe_job_copilot.db import (
+    JOB_STATUSES,
+    init_db,
+    job_stats,
+    query_jobs,
+    record_source_health,
+    source_health,
+    update_job_status,
+    upsert_job,
+)
 from pfe_job_copilot.search_profile import DEFAULT_PROFILE
 from pfe_job_copilot.scoring import is_target_internship
 from pfe_job_copilot.targets import ats_targets
@@ -80,6 +89,11 @@ def stats() -> dict[str, int]:
     return job_stats(API_DB)
 
 
+@app.get("/sources/health")
+def sources_health() -> list[dict[str, object]]:
+    return [dict(row) for row in source_health(API_DB)]
+
+
 @app.patch("/jobs/{job_id}/status")
 def set_status(job_id: int, request: StatusRequest) -> dict[str, object]:
     try:
@@ -102,12 +116,18 @@ def _collector(source: str):
 def collect(request: CollectionRequest) -> dict[str, object]:
     collector = _collector(request.source)
     saved = 0
+    seen = 0
     try:
         for job in collector.search(request.query, request.location, request.limit):
+            seen += 1
             if upsert_job(job, API_DB):
                 saved += 1
     except RuntimeError as exc:
+        record_source_health(request.source, succeeded=False, error=str(exc), db_path=API_DB)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    record_source_health(
+        request.source, succeeded=True, jobs_seen=seen, jobs_saved=saved, db_path=API_DB
+    )
     return {"source": request.source, "query": request.query, "saved": saved}
 
 
@@ -116,11 +136,13 @@ def collect_profile(request: ProfileCollectionRequest) -> dict[str, object]:
     collector = _collector(request.source)
     saved = 0
     skipped = 0
+    seen = 0
     failures: list[dict[str, str]] = []
     queries = DEFAULT_PROFILE.queries[: request.max_queries]
     for query in queries:
         try:
             for job in collector.search(query, request.location, request.limit_per_query):
+                seen += 1
                 if not is_target_internship(job.title, job.company, job.location, job.description):
                     skipped += 1
                     continue
@@ -129,7 +151,13 @@ def collect_profile(request: ProfileCollectionRequest) -> dict[str, object]:
         except RuntimeError as exc:
             failures.append({"query": query, "error": str(exc)})
     if len(failures) == len(queries):
+        record_source_health(
+            request.source, succeeded=False, error=failures[-1]["error"], db_path=API_DB
+        )
         raise HTTPException(status_code=502, detail={"message": "All queries failed", "failures": failures})
+    record_source_health(
+        request.source, succeeded=True, jobs_seen=seen, jobs_saved=saved, db_path=API_DB
+    )
     return {
         "source": request.source,
         "queries": len(queries),
@@ -158,9 +186,11 @@ def collect_portfolio(request: PortfolioCollectionRequest) -> dict[str, object]:
     results: list[dict[str, object]] = []
     for source in ats_targets():
         target_saved = 0
+        target_seen = 0
         try:
             collector = _collector(source)
             for job in collector.search(request.query, request.location, request.limit_per_target):
+                target_seen += 1
                 if not is_target_internship(job.title, job.company, job.location, job.description):
                     skipped += 1
                     continue
@@ -168,8 +198,12 @@ def collect_portfolio(request: PortfolioCollectionRequest) -> dict[str, object]:
                     target_saved += 1
                     saved += 1
             results.append({"source": source, "saved": target_saved, "status": "ok"})
+            record_source_health(
+                source, succeeded=True, jobs_seen=target_seen, jobs_saved=target_saved, db_path=API_DB
+            )
         except RuntimeError as exc:
             results.append({"source": source, "saved": 0, "status": "failed", "error": str(exc)})
+            record_source_health(source, succeeded=False, error=str(exc), db_path=API_DB)
     return {"targets": len(results), "saved": saved, "skipped": skipped, "results": results}
 
 

@@ -94,4 +94,6 @@ class FranceTravailCollector:
                 or f"https://candidat.francetravail.fr/offres/recherche/detail/{job_id}",
                 source=self.source,
                 description=clean_text(item.get("description")),
+                source_job_id=clean_text(str(job_id or "")),
+                published_at=clean_text(item.get("dateCreation")) or None,
             )

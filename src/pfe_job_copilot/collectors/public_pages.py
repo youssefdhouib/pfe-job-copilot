@@ -82,6 +82,13 @@ class PublicJobsPageCollector:
                     url=normalize_url(urljoin(self.base_url, url)),
                     source=self.source,
                     description=clean_text(BeautifulSoup(str(node.get("description", "")), "html.parser").get_text(" ")),
+                    source_job_id=clean_text(
+                        (node.get("identifier") or {}).get("value")
+                        if isinstance(node.get("identifier"), dict)
+                        else node.get("identifier")
+                    ),
+                    published_at=clean_text(node.get("datePosted")) or None,
+                    application_deadline=clean_text(node.get("validThrough")) or None,
                 )
 
     def _from_links(self, soup: BeautifulSoup, fallback_location: str) -> Iterable[Job]:

@@ -13,7 +13,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-discovery = ["python-jobspy>=1.1.80"]
+discovery = [
+    "python-jobspy==1.1.82",
+]
 dev = ["pytest>=8.3.0"]
 
 [project.scripts]

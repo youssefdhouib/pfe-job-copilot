@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  ArrowUpRight, BriefcaseBusiness, ChevronDown, CircleAlert, FileSearch, Filter,
-  LoaderCircle, LogOut, MapPin, Plus, RefreshCw, Search, Sparkles, X,
+  ArrowUpRight, BriefcaseBusiness, CheckCircle2, ChevronDown, CircleAlert, Database,
+  FileSearch, Filter, LoaderCircle, LogOut, MapPin, Plus, Radio, RefreshCw,
+  Search, ShieldCheck, Sparkles, X,
 } from "lucide-react";
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { JOB_STATUSES } from "@/lib/types";
 
 type Props = { initialJobs: Job[]; initialStats: JobStats; online: boolean; authEnabled: boolean };
 type Sort = "score" | "newest" | "company";
+type FeedbackTone = "idle" | "working" | "success" | "error";
 
 const stages: Array<{ key: "all" | JobStatus; label: string }> = [
   { key: "all", label: "All offers" }, { key: "new", label: "New" },
@@ -24,14 +26,38 @@ const statusLabels: Record<JobStatus, string> = {
   applied: "Applied", interview: "Interview", rejected: "Rejected", offer: "Offer", ignored: "Ignored",
 };
 
+const sourceLabels: Record<string, string> = {
+  "alert-linkedin": "LinkedIn alert", "email-alert": "Email alert",
+  "france-travail": "France Travail", ashby: "Ashby", greenhouse: "Greenhouse", lever: "Lever", hellowork: "HelloWork",
+  "jobspy-glassdoor": "Glassdoor", "jobspy-google": "Google Jobs",
+  "jobspy-indeed": "Indeed", "jobspy-linkedin": "LinkedIn", wttj: "Welcome to the Jungle",
+};
+
+function sourceLabel(source: string) {
+  if (source.startsWith("ashby:")) return `Ashby · ${source.split(":", 2)[1]}`;
+  if (source.startsWith("greenhouse:")) return `Greenhouse · ${source.split(":", 2)[1]}`;
+  if (source.startsWith("lever:")) return `Lever · ${source.split(":", 2)[1]}`;
+  return sourceLabels[source] ?? source.replaceAll("-", " ");
+}
+
 function dateLabel(value: string) {
   const date = new Date(value.replace(" ", "T") + (value.includes("Z") ? "" : "Z"));
-  return Number.isNaN(date.valueOf()) ? "Date unknown" : new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date);
+  return Number.isNaN(date.valueOf()) ? "Date unknown" : new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(date);
+}
+
+function closesSoon(value: string | null) {
+  if (!value) return false;
+  const deadline = new Date(value);
+  const remaining = deadline.valueOf() - Date.now();
+  return !Number.isNaN(remaining) && remaining >= 0 && remaining <= 7 * 24 * 60 * 60 * 1000;
 }
 
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`/api/backend${path}`, { cache: "no-store", ...options });
-  const payload = await response.json();
+  const contentType = response.headers.get("content-type") ?? "";
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : { detail: await response.text() || `Request failed with status ${response.status}` };
   if (!response.ok) throw new Error(typeof payload.detail === "string" ? payload.detail : "The request failed");
   return payload as T;
 }
@@ -48,6 +74,7 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
   const [collectOpen, setCollectOpen] = useState(false);
   const [collecting, setCollecting] = useState(false);
   const [collectMessage, setCollectMessage] = useState("");
+  const [feedbackTone, setFeedbackTone] = useState<FeedbackTone>("idle");
   const [refreshing, setRefreshing] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -61,6 +88,7 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
   }, []);
 
   const sources = useMemo(() => [...new Set(jobs.map((job) => job.source))].sort(), [jobs]);
+  const latestSeen = useMemo(() => jobs.reduce((latest, job) => job.last_seen_at > latest ? job.last_seen_at : latest, ""), [jobs]);
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return jobs.filter((job) => {
@@ -89,14 +117,15 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
   async function collect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    setCollecting(true); setCollectMessage("Searching the selected source…");
+    setCollecting(true); setFeedbackTone("working"); setCollectMessage("Searching the selected source…");
     try {
       if (data.get("source") === "ats-portfolio") {
         const result = await api<PortfolioCollectionResult>("/collect/portfolio", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: "stage stagiaire internship intern pfe", location: "France", limit_per_target: Number(data.get("limit")) }),
         });
-        setCollectMessage(`${result.saved} relevant offers saved from ${result.targets} startup boards; ${result.skipped} unrelated listings skipped.`);
+        setFeedbackTone("success");
+        setCollectMessage(`${result.saved} relevant offers saved or refreshed from ${result.targets} company boards; ${result.skipped} unrelated listings skipped.`);
         await refresh();
         return;
       }
@@ -104,9 +133,11 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: data.get("source"), query: data.get("query"), location: "France", limit: Number(data.get("limit")) }),
       });
-      setCollectMessage(`${result.saved} new offer${result.saved === 1 ? "" : "s"} saved. Your queue is current.`);
+      setFeedbackTone("success");
+      setCollectMessage(`${result.saved} offer${result.saved === 1 ? "" : "s"} saved or refreshed. Your queue is current.`);
       await refresh();
     } catch (error) {
+      setFeedbackTone("error");
       setCollectMessage(`${error instanceof Error ? error.message : "Collection failed"}. Check the source configuration and retry.`);
     } finally { setCollecting(false); }
   }
@@ -132,17 +163,34 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
       </header>
 
       <main className="mx-auto w-full max-w-[1460px] px-5 pb-16 sm:px-8 lg:px-16">
-        <section className="flex flex-col items-start justify-between gap-8 py-11 sm:py-14 lg:flex-row lg:items-end lg:py-20">
-          <div>
-            <h1 className="max-w-[860px] text-balance text-[clamp(2.8rem,6vw,5.5rem)] font-semibold leading-[.96] tracking-[-.035em]">Your next application starts here.</h1>
-            <p className="mt-6 text-base text-muted sm:text-lg">{stats.total ? `${stats.total} offer${stats.total === 1 ? "" : "s"} indexed. ${stats.new ?? 0} waiting for review.` : "Your pipeline is ready. Run a collection to build the first queue."}</p>
+        <section className="flex flex-col items-start justify-between gap-8 py-10 sm:py-12 lg:flex-row lg:items-end lg:py-16">
+          <div className="max-w-[860px]">
+            <h1 className="text-balance text-[clamp(2.6rem,5vw,4.75rem)] font-semibold leading-[.97] tracking-[-.035em]">Your next PFE starts here.</h1>
+            <p className="mt-5 max-w-[68ch] text-base leading-7 text-muted sm:text-lg">One ranked queue for AI and software internships collected from trusted APIs, alerts, public pages, and direct company boards.</p>
+            <dl className="mt-7 flex flex-wrap gap-x-8 gap-y-3 text-sm">
+              <div className="flex items-baseline gap-2"><dt className="text-muted">Active offers</dt><dd className="text-lg font-bold text-ink">{stats.total}</dd></div>
+              <div className="flex items-baseline gap-2"><dt className="text-muted">Sources in queue</dt><dd className="text-lg font-bold text-ink">{sources.length}</dd></div>
+              <div className="flex items-baseline gap-2"><dt className="text-muted">Last seen</dt><dd className="font-bold text-ink">{latestSeen ? dateLabel(latestSeen) : "Not yet"}</dd></div>
+            </dl>
           </div>
           <button onClick={() => setCollectOpen((value) => !value)} aria-expanded={collectOpen} className="inline-flex h-12 items-center gap-2 rounded-xl bg-cobalt px-5 font-bold text-white transition-colors hover:bg-cobalt-dark">
-            {collectOpen ? <X size={18} aria-hidden /> : <Plus size={18} aria-hidden />} {collectOpen ? "Close" : "Collect jobs"}
+            {collectOpen ? <X size={18} aria-hidden /> : <Plus size={18} aria-hidden />} {collectOpen ? "Close collector" : "Collect offers"}
           </button>
         </section>
 
-        {collectOpen && <CollectionPanel collecting={collecting} message={collectMessage} onSubmit={collect} />}
+        <details className="group mb-8 border-y border-rule-dark bg-white/45">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-1 py-3 font-bold marker:content-none">
+            <span className="flex items-center gap-3"><Database size={18} className="text-cobalt" aria-hidden />How jobs arrive</span>
+            <span className="flex items-center gap-2 text-xs font-medium text-muted">Source coverage<ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden /></span>
+          </summary>
+          <div className="grid gap-6 border-t border-rule px-1 py-6 text-sm md:grid-cols-3">
+            <SourceRoute icon={<Radio />} title="Scheduled intake" copy="France Travail, Gmail alerts, and conservative Indeed discovery." />
+            <SourceRoute icon={<ShieldCheck />} title="Direct public feeds" copy="Welcome to the Jungle plus verified Greenhouse, Lever, and Ashby company boards." />
+            <SourceRoute icon={<Search />} title="On-demand discovery" copy="Google Jobs, LinkedIn, Glassdoor, and Adzuna stay limited and user-triggered." />
+          </div>
+        </details>
+
+        {collectOpen && <CollectionPanel collecting={collecting} message={collectMessage} tone={feedbackTone} onSubmit={collect} />}
 
         <nav aria-label="Application stages" className="queue-scrollbar -mx-5 flex overflow-x-auto border-y border-rule-dark px-5 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6">
           {stages.map((item) => (
@@ -158,7 +206,7 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
             <div className="grid gap-5 sm:grid-cols-3 lg:grid-cols-1">
               <Field label="Search"><div className="relative"><Search size={17} className="pointer-events-none absolute left-3 top-3 text-muted" aria-hidden /><Input value={search} onChange={(e) => setSearch(e.target.value)} type="search" placeholder="Role, company, location" className="pl-9" /></div></Field>
               <Field label={`Minimum match · ${minScore}`}><input value={minScore} onChange={(e) => setMinScore(Number(e.target.value))} type="range" min="0" max="100" step="5" className="h-6 w-full accent-cobalt" /></Field>
-              <Field label="Source"><Select value={source} onChange={(e) => setSource(e.target.value)}><option value="all">All sources</option>{sources.map((item) => <option key={item} value={item}>{item}</option>)}</Select></Field>
+              <Field label="Source"><Select value={source} onChange={(e) => setSource(e.target.value)}><option value="all">All sources</option>{sources.map((item) => <option key={item} value={item}>{sourceLabel(item)}</option>)}</Select></Field>
             </div>
             <div className="mt-6 flex gap-3 border-t border-rule pt-5 text-xs leading-5 text-muted"><Sparkles size={18} className="shrink-0 text-cobalt" aria-hidden /><p>Higher scores mean stronger alignment with your AI, software, and PFE profile.</p></div>
           </aside>
@@ -180,17 +228,21 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
   );
 }
 
-function CollectionPanel({ collecting, message, onSubmit }: { collecting: boolean; message: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function CollectionPanel({ collecting, message, tone, onSubmit }: { collecting: boolean; message: string; tone: FeedbackTone; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   return <section className="mb-8 rounded-2xl bg-cobalt-dark p-6 text-white shadow-panel lg:p-7" aria-labelledby="collect-title">
-    <div><h2 id="collect-title" className="text-xl font-bold">Run a focused search</h2><p className="mt-1 text-sm text-blue-100">Use official or public sources. Keep protected-board discovery small.</p></div>
+    <div><h2 id="collect-title" className="text-xl font-bold">Collect relevant offers</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-blue-100">Choose one route and keep the query focused. Results are deduplicated and ranked before they enter this queue.</p></div>
     <form onSubmit={onSubmit} className="mt-6 grid items-end gap-4 md:grid-cols-[190px_minmax(260px,1fr)_90px_auto]">
-      <Field label="Source"><Select name="source" defaultValue="france-travail"><option value="france-travail">France Travail</option><option value="ats-portfolio">Startup portfolio</option><option value="jobspy-indeed">Indeed via JobSpy</option><option value="jobspy-linkedin">LinkedIn via JobSpy</option><option value="jobspy-glassdoor">Glassdoor via JobSpy</option><option value="jobspy-google">Google Jobs</option><option value="adzuna">Adzuna</option></Select></Field>
+      <Field label="Source"><Select name="source" defaultValue="france-travail"><optgroup label="Trusted feeds"><option value="france-travail">France Travail</option><option value="wttj">Welcome to the Jungle</option><option value="ats-portfolio">Direct company boards</option></optgroup><optgroup label="Limited discovery"><option value="jobspy-indeed">Indeed</option><option value="jobspy-google">Google Jobs</option><option value="jobspy-linkedin">LinkedIn</option><option value="jobspy-glassdoor">Glassdoor</option><option value="adzuna">Adzuna</option></optgroup></Select></Field>
       <Field label="Keywords"><Input name="query" defaultValue="stage PFE intelligence artificielle" required /></Field>
       <Field label="Limit"><Input name="limit" type="number" min="1" max="50" defaultValue="10" required /></Field>
       <button disabled={collecting} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 font-bold text-cobalt-dark transition-colors hover:bg-blue-50 disabled:opacity-70">{collecting && <LoaderCircle size={17} className="animate-spin" />}Run collection</button>
     </form>
-    <p role="status" aria-live="polite" className="mt-3 min-h-5 text-sm text-blue-100">{message}</p>
+    <p role="status" aria-live="polite" className={`mt-4 flex min-h-5 items-start gap-2 text-sm leading-5 ${tone === "error" ? "text-red-100" : "text-blue-100"}`}>{tone === "success" && <CheckCircle2 size={17} className="mt-0.5 shrink-0" aria-hidden />}{tone === "error" && <CircleAlert size={17} className="mt-0.5 shrink-0" aria-hidden />}{message}</p>
   </section>;
+}
+
+function SourceRoute({ icon, title, copy }: { icon: React.ReactNode; title: string; copy: string }) {
+  return <div className="flex gap-3 text-muted"><span className="mt-0.5 shrink-0 text-cobalt [&>svg]:size-[18px]" aria-hidden>{icon}</span><div><h3 className="font-bold text-ink">{title}</h3><p className="mt-1 max-w-[44ch] leading-6">{copy}</p></div></div>;
 }
 
 function JobRow({ job, saving, onStatus }: { job: Job; saving: boolean; onStatus: (job: Job, status: JobStatus) => void }) {
@@ -199,9 +251,10 @@ function JobRow({ job, saving, onStatus }: { job: Job; saving: boolean; onStatus
       <span className="score-fill absolute inset-0 bg-cobalt-wash" /><strong className="relative text-2xl font-bold text-cobalt-dark">{Math.min(100, Math.max(0, job.score))}</strong><small className="relative mt-1 text-[9px] font-bold uppercase tracking-[.09em] text-muted">match</small>
     </div>
     <div className="min-w-0">
-      <div className="flex items-center justify-between gap-4"><span className="text-[11px] font-extrabold uppercase tracking-[.07em] text-cobalt-dark">{job.source.replaceAll("-", " ")}</span><time className="text-xs text-muted" dateTime={job.created_at}>{dateLabel(job.created_at)}</time></div>
+      <div className="flex items-center justify-between gap-4"><span className="text-[11px] font-extrabold uppercase tracking-[.07em] text-cobalt-dark">{sourceLabel(job.source)}</span><time className="text-xs text-muted" dateTime={job.created_at}>{dateLabel(job.created_at)}</time></div>
       <h3 className="mt-2 text-[clamp(1.25rem,2vw,1.75rem)] font-semibold leading-tight tracking-[-.02em]"><a href={job.url} target="_blank" rel="noreferrer" className="decoration-1 underline-offset-4 hover:text-cobalt-dark hover:underline">{job.title || "Untitled offer"}</a></h3>
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted"><strong className="text-ink">{job.company || "Company not listed"}</strong><span className="inline-flex items-center gap-1"><MapPin size={13} aria-hidden />{job.location || "Location not listed"}</span></p>
+      {closesSoon(job.application_deadline) && <p className="mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Closing soon · {dateLabel(job.application_deadline!)}</p>}
       <p className="job-description mt-4 max-w-[74ch] text-sm leading-6 text-slate-600">{job.description || "Open the original offer to read the full description."}</p>
     </div>
     <div className="col-start-auto flex items-end justify-between gap-4 sm:col-start-2 lg:col-start-auto lg:flex-col lg:items-stretch">

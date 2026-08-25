@@ -50,6 +50,8 @@ class CollectorRegistryTests(unittest.TestCase):
         <script type="application/ld+json">{
           "@type":"JobPosting", "title":"Stage Ingénieur IA Générative",
           "url":"/fr/companies/acme/jobs/stage-ia_paris", "description":"LLM et RAG",
+          "identifier":{"value":"job-42"}, "datePosted":"2026-08-20",
+          "validThrough":"2027-02-28",
           "hiringOrganization":{"name":"Acme"},
           "jobLocation":{"address":{"addressLocality":"Paris","addressCountry":"FR"}}
         }</script>
@@ -66,6 +68,8 @@ class CollectorRegistryTests(unittest.TestCase):
         self.assertEqual(jobs[0].company, "Acme")
         self.assertEqual(jobs[0].location, "Paris, FR")
         self.assertEqual(jobs[0].description, "LLM et RAG")
+        self.assertEqual(jobs[0].source_job_id, "job-42")
+        self.assertEqual(jobs[0].application_deadline, "2027-02-28")
 
     def test_rejects_unknown_source(self) -> None:
         with self.assertRaises(ValueError):

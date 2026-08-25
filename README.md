@@ -7,13 +7,14 @@ Small local pipeline for collecting and ranking PFE internship offers in France.
 - Stores jobs in SQLite.
 - Accepts pasted job URLs.
 - Collects jobs from API-backed sources and isolated collectors.
-- Deduplicates jobs by normalized URL/title/company.
+- Deduplicates jobs by stable ATS/global ID, falling back to normalized URL.
 - Scores offers against a fixed PFE AI/software profile.
 - Generates focused French and English PFE/AI search queries.
 - Supports public Greenhouse, Lever, and Ashby company feeds.
 - Ingests rendered job-alert emails through the same normalized job pipeline.
 - Runs a configurable portfolio of verified startup/company ATS boards.
 - Provides optional, conservative JobSpy discovery.
+- Tracks first/last seen timestamps, explicit application deadlines, active state, and source health.
 - Tracks the planned source strategy for job boards, APIs, alerts, and startup ATS pages.
 
 ## Quick Start
@@ -99,6 +100,7 @@ The local FastAPI service provides:
 - `GET /health`
 - `GET /jobs`
 - `GET /stats`
+- `GET /sources/health`
 - `POST /collect`
 - `POST /collect/profile`
 - `POST /collect/portfolio`
