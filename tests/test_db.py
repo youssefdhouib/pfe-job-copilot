@@ -6,6 +6,7 @@ from pathlib import Path
 from pfe_job_copilot.db import (
     init_db,
     query_jobs,
+    rescore_jobs,
     reconcile_source_snapshot,
     record_source_health,
     source_health,
@@ -15,6 +16,22 @@ from pfe_job_copilot.models import Job
 
 
 class DatabaseTests(unittest.TestCase):
+    def test_existing_jobs_can_be_rescored_without_losing_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "jobs.sqlite3"
+            init_db(db)
+            upsert_job(Job(title="Stage PFE Ingénieur IA", company="A", location="Paris, France",
+                           description="LLM Python", url="https://a.test/1", source="test", score=1), db)
+            connection = sqlite3.connect(db)
+            connection.execute("UPDATE jobs SET status = 'shortlisted'")
+            connection.commit()
+            connection.close()
+
+            self.assertEqual(rescore_jobs(db), 1)
+            row = query_jobs(db)[0]
+            self.assertGreater(row["score"], 1)
+            self.assertEqual(row["status"], "shortlisted")
+
     def test_external_scores_are_capped_at_100(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "jobs.sqlite3"

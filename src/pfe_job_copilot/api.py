@@ -16,6 +16,7 @@ from pfe_job_copilot.db import (
     job_stats,
     query_jobs,
     record_source_health,
+    rescore_jobs,
     source_health,
     update_job_status,
     upsert_job,
@@ -65,6 +66,7 @@ class PortfolioCollectionRequest(BaseModel):
 @app.on_event("startup")
 def initialize() -> None:
     init_db(API_DB)
+    rescore_jobs(API_DB)
 
 
 @app.get("/health")

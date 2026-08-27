@@ -29,7 +29,7 @@ const statusLabels: Record<JobStatus, string> = {
 const sourceLabels: Record<string, string> = {
   "alert-linkedin": "LinkedIn alert", "email-alert": "Email alert",
   "france-travail": "France Travail", ashby: "Ashby", greenhouse: "Greenhouse", lever: "Lever", hellowork: "HelloWork",
-  "jobspy-glassdoor": "Glassdoor", "jobspy-google": "Google Jobs",
+  "jobspy-glassdoor": "Glassdoor", "jobspy-google": "Google Jobs (legacy)", "google-jobs": "Google Jobs",
   "jobspy-indeed": "Indeed", "jobspy-linkedin": "LinkedIn", wttj: "Welcome to the Jungle",
 };
 
@@ -184,9 +184,9 @@ export function Dashboard({ initialJobs, initialStats, online, authEnabled }: Pr
             <span className="flex items-center gap-2 text-xs font-medium text-muted">Source coverage<ChevronDown size={16} className="transition-transform group-open:rotate-180" aria-hidden /></span>
           </summary>
           <div className="grid gap-6 border-t border-rule px-1 py-6 text-sm md:grid-cols-3">
-            <SourceRoute icon={<Radio />} title="Scheduled intake" copy="France Travail, Gmail alerts, and conservative Indeed discovery." />
+            <SourceRoute icon={<Radio />} title="Scheduled intake" copy="Google Jobs, France Travail, Gmail alerts, and conservative Indeed discovery." />
             <SourceRoute icon={<ShieldCheck />} title="Direct public feeds" copy="Welcome to the Jungle plus verified Greenhouse, Lever, and Ashby company boards." />
-            <SourceRoute icon={<Search />} title="On-demand discovery" copy="Google Jobs, LinkedIn, Glassdoor, and Adzuna stay limited and user-triggered." />
+            <SourceRoute icon={<Search />} title="On-demand discovery" copy="Focused manual searches remain available when you need to widen the scheduled intake." />
           </div>
         </details>
 
@@ -232,7 +232,7 @@ function CollectionPanel({ collecting, message, tone, onSubmit }: { collecting: 
   return <section className="mb-8 rounded-2xl bg-cobalt-dark p-6 text-white shadow-panel lg:p-7" aria-labelledby="collect-title">
     <div><h2 id="collect-title" className="text-xl font-bold">Collect relevant offers</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-blue-100">Choose one route and keep the query focused. Results are deduplicated and ranked before they enter this queue.</p></div>
     <form onSubmit={onSubmit} className="mt-6 grid items-end gap-4 md:grid-cols-[190px_minmax(260px,1fr)_90px_auto]">
-      <Field label="Source"><Select name="source" defaultValue="france-travail"><optgroup label="Trusted feeds"><option value="france-travail">France Travail</option><option value="wttj">Welcome to the Jungle</option><option value="ats-portfolio">Direct company boards</option></optgroup><optgroup label="Limited discovery"><option value="jobspy-indeed">Indeed</option><option value="jobspy-google">Google Jobs</option><option value="jobspy-linkedin">LinkedIn</option><option value="jobspy-glassdoor">Glassdoor</option><option value="adzuna">Adzuna</option></optgroup></Select></Field>
+      <Field label="Source"><Select name="source" defaultValue="france-travail"><optgroup label="Trusted feeds"><option value="france-travail">France Travail</option><option value="wttj">Welcome to the Jungle</option><option value="google-jobs">Google Jobs</option><option value="ats-portfolio">Direct company boards</option></optgroup><optgroup label="Limited discovery"><option value="jobspy-indeed">Indeed</option><option value="jobspy-linkedin">LinkedIn</option><option value="adzuna">Adzuna</option></optgroup></Select></Field>
       <Field label="Keywords"><Input name="query" defaultValue="stage PFE intelligence artificielle" required /></Field>
       <Field label="Limit"><Input name="limit" type="number" min="1" max="50" defaultValue="10" required /></Field>
       <button disabled={collecting} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 font-bold text-cobalt-dark transition-colors hover:bg-blue-50 disabled:opacity-70">{collecting && <LoaderCircle size={17} className="animate-spin" />}Run collection</button>

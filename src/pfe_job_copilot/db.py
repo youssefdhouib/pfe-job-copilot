@@ -139,6 +139,20 @@ def upsert_job(job: Job, db_path: Path = DEFAULT_DB) -> bool:
         return cursor.rowcount > 0
 
 
+def rescore_jobs(db_path: Path = DEFAULT_DB) -> int:
+    """Recompute stored scores after the deterministic scoring rules change."""
+    init_db(db_path)
+    with closing(connect(db_path)) as connection:
+        rows = connection.execute("SELECT id, title, company, location, description FROM jobs")
+        updates = [
+            (score_job(row["title"], row["company"], row["location"], row["description"]), row["id"])
+            for row in rows
+        ]
+        connection.executemany("UPDATE jobs SET score = ? WHERE id = ?", updates)
+        connection.commit()
+        return len(updates)
+
+
 def list_jobs(db_path: Path = DEFAULT_DB, limit: int = 25) -> list[sqlite3.Row]:
     with closing(connect(db_path)) as connection:
         return list(

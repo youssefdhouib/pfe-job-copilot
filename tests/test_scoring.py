@@ -16,15 +16,21 @@ class ScoringTests(unittest.TestCase):
             location="Paris, France",
             description="PFE de 6 mois en Python, machine learning, LLM, RAG et Hugging Face.",
         )
-        self.assertGreaterEqual(score, 100)
+        self.assertGreaterEqual(score, 80)
 
-    def test_score_is_capped_at_100(self) -> None:
+    def test_keyword_density_does_not_make_every_good_job_100(self) -> None:
         score = score_job(
             "Stage PFE AI Engineer Internship",
             location="Paris, France",
             description="Python machine learning deep learning LLM RAG NLP MLOps computer vision.",
         )
-        self.assertEqual(score, 100)
+        self.assertGreaterEqual(score, 80)
+        self.assertLessEqual(score, 100)
+
+    def test_generic_software_internship_ranks_below_ai_pfe(self) -> None:
+        generic = score_job("Stage développeur web", location="Paris, France", description="JavaScript frontend.")
+        ai_pfe = score_job("Stage PFE Ingénieur IA", location="Paris, France", description="LLM Python RAG.")
+        self.assertLess(generic, ai_pfe)
 
     def test_senior_cdi_is_downgraded(self) -> None:
         score = score_job(
