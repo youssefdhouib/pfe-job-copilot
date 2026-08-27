@@ -7,11 +7,13 @@ from pfe_job_copilot.collectors.france_travail import FranceTravailCollector
 from pfe_job_copilot.collectors.html_search import COLLECTORS as HTML_COLLECTORS
 from pfe_job_copilot.collectors.jobspy import JobSpyCollector
 from pfe_job_copilot.collectors.public_pages import HELLOWORK_COLLECTOR, WTTJ_COLLECTOR
+from pfe_job_copilot.collectors.serpapi_google_jobs import SerpApiGoogleJobsCollector
 
 
 COLLECTORS: dict[str, Collector] = {
     "adzuna": AdzunaCollector(),
     "france-travail": FranceTravailCollector(),
+    "google-jobs": SerpApiGoogleJobsCollector(),
     "indeed": HTML_COLLECTORS["indeed"],
     "hellowork": HELLOWORK_COLLECTOR,
     "wttj": WTTJ_COLLECTOR,

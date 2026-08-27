@@ -25,7 +25,7 @@
         "url": "http://backend:8000/collect/profile",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\"source\":\"jobspy-indeed\",\"location\":\"France\",\"max_queries\":1,\"limit_per_query\":10}",
+        "jsonBody": "{\"source\":\"jobspy-indeed\",\"location\":\"France\",\"max_queries\":4,\"limit_per_query\":25}",
         "options": {
           "timeout": 120000
         }

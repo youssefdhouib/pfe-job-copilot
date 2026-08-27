@@ -3,9 +3,9 @@
   "name": "PFE - Google Jobs discovery",
   "nodes": [
     {
-      "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 24}]}},
+      "parameters": {"rule": {"interval": [{"field": "days", "daysInterval": 2}]}},
       "id": "schedule-google-jobs",
-      "name": "Every 24 hours",
+      "name": "Every 2 days",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [260, 300]
@@ -16,7 +16,7 @@
         "url": "http://backend:8000/collect/profile",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\"source\":\"jobspy-google\",\"location\":\"France\",\"max_queries\":1,\"limit_per_query\":10}",
+        "jsonBody": "{\"source\":\"google-jobs\",\"location\":\"France\",\"max_queries\":4,\"limit_per_query\":10}",
         "options": {"timeout": 120000}
       },
       "id": "collect-google-jobs",
@@ -26,7 +26,7 @@
       "position": [500, 300]
     }
   ],
-  "connections": {"Every 24 hours": {"main": [[{"node": "Collect Google Jobs discovery", "type": "main", "index": 0}]]}},
+  "connections": {"Every 2 days": {"main": [[{"node": "Collect Google Jobs discovery", "type": "main", "index": 0}]]}},
   "pinData": {},
   "settings": {"executionOrder": "v1"},
   "active": false

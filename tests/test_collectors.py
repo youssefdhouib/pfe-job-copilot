@@ -1,15 +1,28 @@
 import unittest
+from unittest.mock import patch
 
 from pfe_job_copilot.collectors.ats import AshbyCollector, GreenhouseCollector, LeverCollector
 from pfe_job_copilot.collectors.jobspy import JobSpyCollector
 from pfe_job_copilot.collectors.registry import get_collector
 from pfe_job_copilot.collectors.public_pages import PublicJobsPageCollector
+from pfe_job_copilot.collectors.serpapi_google_jobs import SerpApiGoogleJobsCollector
 import re
 
 
 class FakeResponse:
     def __init__(self, text: str) -> None:
         self.text = text
+
+
+class FakeJsonResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        return self.payload
 
 
 class FakeFetcher:
@@ -44,6 +57,27 @@ class CollectorRegistryTests(unittest.TestCase):
     def test_registers_public_french_collectors(self) -> None:
         self.assertEqual(get_collector("wttj").source, "wttj")
         self.assertEqual(get_collector("hellowork").source, "hellowork")
+        self.assertIsInstance(get_collector("google-jobs"), SerpApiGoogleJobsCollector)
+
+    @patch.dict("os.environ", {"SERPAPI_API_KEY": "test-key"})
+    @patch("pfe_job_copilot.collectors.serpapi_google_jobs.httpx.get")
+    def test_google_jobs_maps_serpapi_result(self, get) -> None:
+        get.return_value = FakeJsonResponse({
+            "jobs_results": [{
+                "job_id": "google-42",
+                "title": "Stage Ingénieur IA",
+                "company_name": "Acme",
+                "location": "Paris",
+                "description": "PFE en intelligence artificielle",
+                "apply_options": [{"link": "https://acme.test/jobs/42"}],
+            }]
+        })
+
+        jobs = list(SerpApiGoogleJobsCollector().search("stage IA", "France", 10))
+
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs[0].source_job_id, "google-42")
+        self.assertEqual(jobs[0].url, "https://acme.test/jobs/42")
 
     def test_public_collector_reads_jobposting_jsonld_and_deduplicates_links(self) -> None:
         html = '''
