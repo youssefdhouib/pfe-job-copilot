@@ -1,0 +1,33 @@
+{
+  "id": "PFEAdzunaCollection",
+  "name": "PFE - Adzuna collection",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 12}]}},
+      "id": "schedule-adzuna",
+      "name": "Every 12 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/collect/profile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"source\":\"adzuna\",\"location\":\"France\",\"max_queries\":2,\"limit_per_query\":20}",
+        "options": {"timeout": 120000}
+      },
+      "id": "collect-adzuna",
+      "name": "Collect Adzuna jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {"Every 12 hours": {"main": [[{"node": "Collect Adzuna jobs", "type": "main", "index": 0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}

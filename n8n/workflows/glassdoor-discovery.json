@@ -1,0 +1,33 @@
+{
+  "id": "PFEGlassdoorDiscovery",
+  "name": "PFE - Glassdoor discovery",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "hours", "hoursInterval": 24}]}},
+      "id": "schedule-glassdoor",
+      "name": "Every 24 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/collect/profile",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"source\":\"jobspy-glassdoor\",\"location\":\"France\",\"max_queries\":1,\"limit_per_query\":10}",
+        "options": {"timeout": 120000}
+      },
+      "id": "collect-glassdoor",
+      "name": "Collect Glassdoor discovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {"Every 24 hours": {"main": [[{"node": "Collect Glassdoor discovery", "type": "main", "index": 0}]]}},
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}
