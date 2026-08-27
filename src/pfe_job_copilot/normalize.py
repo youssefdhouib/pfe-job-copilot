@@ -11,8 +11,8 @@ TRACKING_KEYS = {
 }
 
 
-def clean_text(value: str | None) -> str:
-    return " ".join((value or "").split())
+def clean_text(value: object | None) -> str:
+    return " ".join(("" if value is None else str(value)).split())
 
 
 def normalize_url(url: str) -> str:
